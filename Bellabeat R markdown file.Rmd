@@ -1,0 +1,149 @@
+---
+title: "Case study of Bellabeat with R"
+author: "Mark Bomet"
+date: '2022-07-18'
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction to the Case Study
+
+
+Bellabeat is a prosperous small business with the potential to grow and dominate the global market for smart devices. Bellabeat's cofounder and chief creative officer, Urka Sren, thinks that studying fitness data from smart devices could help the business find new development prospects.
+
+## business Task
+
+Determine prospective areas for expansion and offer suggestions for the Bellabeat marketing plan's enhancement in light of smart device usage patterns.
+
+## Questions for the analysis
+
+1. What are some trends in smart device usage?
+2. How could these trends apply to Bellabeat customers?
+3. How could these trends help influence Bellabeat marketing strategy
+
+### Loading necessary packages
+
+```{r cars}
+library(tidyverse)
+library(lubridate)
+```
+
+## Reading the data into R
+
+```{r uploads}
+activity <- read.csv(file.choose())
+weight <- read.csv(file.choose())
+calories <- read.csv(file.choose())
+sleep <- read.csv(file.choose())
+intensities <- read.csv(file.choose())
+```
+
+## Check internal information of the data
+```{r glimpse files}
+glimpse(activity)
+glimpse(calories)
+glimpse(intensities)
+glimpse(sleep)
+glimpse(weight)
+```
+
+##### Note: we need to Convert date column from char to date format for all the datasets
+```{r convert datess}
+intensities$ActivityDay = as.POSIXct(intensities$ActivityDay,format="%m/%d/%Y %I:%M:%S %p", tz=Sys.timezone())
+intensities$time <- format(intensities$ActivityHour, format = "%H:%M:%S")
+intensities$date <- format(intensities$ActivityHour, format = "%m/%d/%y")
+
+calories$ActivityDay=as.POSIXct(calories$ActivityDay, format="%m/%d/%Y %I:%M:%S %p", tz=Sys.timezone())
+calories$time <- format(calories$ActivityHour, format = "%H:%M:%S")
+calories$date <- format(calories$ActivityHour, format = "%m/%d/%y")
+
+activity$ActivityDate=as.POSIXct(activity$ActivityDate, format="%m/%d/%Y", tz=Sys.timezone())
+activity$date <- format(activity$ActivityDate, format = "%m/%d/%y")
+
+sleep$SleepDay=as.POSIXct(sleep$SleepDay, format="%m/%d/%Y %I:%M:%S %p", tz=Sys.timezone())
+sleep$date <- format(sleep$SleepDay, format = "%m/%d/%y")
+```
+
+### Next we check for possible duplicates in our data
+```{r check distinct}
+n_distinct(activity$Id)
+n_distinct(calories$Id)
+n_distinct(intensities$Id)
+n_distinct(sleep$Id)
+n_distinct(weight$Id)
+```
+##### There appears to be no duplicates but the weight df has very little data to make meaningful cionclusion from
+
+### Next we summarize our data to get a high level understanding of the statistics
+```{r summary}
+activity %>%  
+  select(TotalSteps,
+         TotalDistance,
+         SedentaryMinutes, Calories) %>%
+  summary()
+activity %>%
+  select(VeryActiveMinutes, FairlyActiveMinutes, LightlyActiveMinutes) %>%
+  summary()
+weight %>%
+  select(WeightKg, BMI) %>%
+  summary()
+sleep %>%
+  select(TotalSleepRecords, TotalMinutesAsleep, TotalTimeInBed) %>%           
+  summary()
+calories %>%
+  select(Calories) %>%
+  summary()
+```
+
+##### A few things to note from these summaries:
+  1. On average, the participants sleep for about 419 minutes or 7 hours
+  2. The mean steps per day is 7638. According to CDC data, an average person takes 7638 total steps every day, which is a touch too few for it to be beneficial to their health. They discovered that walking 8,000 steps per day was linked to a 51 percent lower risk of death from all causes (or death from all causes). 
+
+
+### Merge the sleep and Activity data to create a new data frame. This is to be done before visualizing the data
+
+```{r merge}
+merged_data <- merge(sleep, activity, by=c('Id', 'date'))
+head(merged_data)
+```
+
+## Visualization
+
+``` {r vuisualize}
+ ggplot(data=activity, aes(x=TotalSteps, y=Calories)) + 
+  geom_point() + geom_smooth() + labs(title="Calories against Total Steps")
+```
+
+##### there is a positive correlation between the total steps and the calories burnt. This is logical as we generally burn more calories with increased activities
+
+```{r visualize}
+ggplot(data=sleep, aes(x=TotalMinutesAsleep, y=TotalTimeInBed)) + 
+  geom_point()+ geom_smooth() + labs(title="Total Minutes Asleep against Total Time in Bed")
+```
+
+##### What to note from this:
+   1. There's a linear correlation between the two variables. 
+   2. Bellabeat should consider including notifications to it's users when it time to go to bed
+
+
+
+#### next review the merged data for insights. Our goal is to find out what impact a sedentary lifestyle has on sleeping patterns
+
+```{r visualize 2}
+ggplot(data=merged_data, aes(x=TotalMinutesAsleep, y=SedentaryMinutes)) + 
+  geom_point(color='darkblue') + geom_smooth() +
+  labs(title="Minutes Asleep vs. Sedentary Minutes")
+```
+
+##### What to note from this:
+  1. There's a clear negative correlation between the two. 
+  2. Bellabeat should encourage it's clients to keep an active lifestyle in order to improve their sleep time.
+
+
+#### Key findings from the analysis of the various data sets
+
+  1. There is a huge market for women working long hours, possibly the entire day at the office. This is clear from the sedentary time data
+  2. To improve their sleep hours, Bellabeat should encourage their clients to keep an ative lifestyle as evidenced by the 'minutes asleep vs. sedentary minutes visualization
